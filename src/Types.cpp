@@ -168,6 +168,28 @@ double dot(const Row& A, const Row& B)
 }
 
 
+double rSqr(const Matrix& actual, const Matrix& pred)
+{
+	size_t n = actual.size();
+	if (n != pred.size())
+        throw std::invalid_argument("Difference in size");
+
+	double mean = 0;
+	for (size_t i = 0; i < n; i++)
+		mean += actual[i][0];
+	mean /= n;
+
+	double sumRes = 0;
+	double sumSqr = 0;
+	for (size_t i = 0; i < n; i++)
+	{
+		sumRes += std::pow(actual[i][0] - pred[i][0], 2);
+		sumSqr += std::pow(actual[i][0] - mean, 2);
+	}
+	return 1 - (sumRes / sumSqr);
+}
+
+
 std::string smartFormat(double val) {
     if (std::abs(val) < 1e-9)
         return "0";

@@ -48,6 +48,8 @@ Matrix transpose(const Matrix& m);
 double det(Matrix m);
 Matrix invert(const Matrix& m);
 
+double rSqr(const Matrix& actual, const Matrix& pred);
+
 double dot(const Row& A, const Row& B);
 std::ostream& operator<<(std::ostream& os, const Matrix& m);
 std::ostream& operator<<(std::ostream& os, const Row& row);

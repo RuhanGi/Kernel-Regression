@@ -16,7 +16,7 @@
 
 class GProcess {
     private:
-        Kernel &k;
+        Kernel &kernel;
 
     public:
         GProcess(Kernel &k);

@@ -56,5 +56,5 @@ re: fclean all
 
 gpush: fclean
 	git add .
-	git commit -m "regularizer"
+	git commit -m "gaussian process"
 	git push
