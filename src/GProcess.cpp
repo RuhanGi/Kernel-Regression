@@ -19,5 +19,10 @@ GProcess::GProcess(Kernel &k) : k(k)
 
 void GProcess::fit(Dataset &d)
 {
-    
+    size_t N = d.X.size();
+    Matrix K(N, Row(N));
+    for (size_t i = 0; i < N; i++)
+        for (size_t j = 0; j < N; j++)
+            K[i][j] = k.calc(d.X[i], d.X[j]) + (i == j) / k.beta;
+
 }

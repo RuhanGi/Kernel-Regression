@@ -56,5 +56,5 @@ re: fclean all
 
 gpush: fclean
 	git add .
-	git commit -m "initial"
+	git commit -m "regularizer"
 	git push
