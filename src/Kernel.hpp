@@ -16,7 +16,7 @@
 
 class Kernel {
     private:
-        Row thetas;
+        Row theta;
 
     public:
         const KernelType type;
@@ -24,5 +24,7 @@ class Kernel {
 
         Kernel(KernelType k);
         double calc(const Row& xn, const Row& xm);
-        double getDerivative(const Row& xn, const Row& xm, int index);
+        void update(const Matrix& X, const Matrix& Cinv, const Row& a);
+        void deriveComplex(const Matrix& X, const Matrix& Cinv, const Row& a);
+        void print();
 };

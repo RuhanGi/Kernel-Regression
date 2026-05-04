@@ -42,6 +42,20 @@ bool checkRectangle(const Matrix& A, bool Square)
 }
 
 
+double trace(const Matrix& m)
+{
+    if (m.empty())
+        return 0;
+    if (m.size() != m[0].size())
+        throw std::invalid_argument("No Trace of Non-Square!");
+
+    double sum = 0;
+    for (size_t i = 0; i < m.size(); i++)
+        sum += m[i][i];
+    return sum;
+}
+
+
 Matrix transpose(const Matrix& m)
 {
     if (m.empty())
@@ -108,7 +122,7 @@ double gaussJordan(Matrix& aug, size_t n)
                 pivot = i;
         det_val *= swap(aug, j, pivot);
         if (std::abs(aug[j][j]) < 1e-15) 
-            return 0.0;
+            return std::nan("");;
         det_val *= 1.0 / scale(aug, 1.0/aug[j][j], j);
         for (size_t i = 0; i < n; i++)
             if (i != j)
@@ -145,7 +159,7 @@ Matrix invert(const Matrix& m)
             aug[i].push_back(i==j);
 
     double d = gaussJordan(aug, n);
-    if (std::abs(d) < 1e-15) 
+    if (std::isnan(d)) 
         throw std::invalid_argument("Singular Matrix has no Inverse");
 
     Matrix res(n, Row(n));
@@ -295,5 +309,18 @@ Matrix operator*(const Matrix& A, const Matrix& B)
                     res_row[j] += A[i][m] * B[m][j];
         }
     );
+    return res;
+}
+
+
+Row operator*(const Matrix& X, const Row& r)
+{
+    if (X.empty() || X[0].size() != r.size())
+        throw std::invalid_argument("Dimension Mismatch: Matrix Cols != Vector Size");
+    
+    Row res(X.size(), 0.0);
+    for (size_t i = 0; i < X.size(); i++)
+        for (size_t j = 0; j < r.size(); j++)
+            res[i] += X[i][j] * r[j];
     return res;
 }

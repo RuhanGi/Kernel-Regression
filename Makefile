@@ -56,5 +56,5 @@ re: fclean all
 
 gpush: fclean
 	git add .
-	git commit -m "gaussian process"
+	git commit -m "broken learning"
 	git push

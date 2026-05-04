@@ -31,19 +31,22 @@
 #define CYAN	"\x1B[36m"
 #define RESET	"\x1B[0m"
 
+#define M_PI    3.14159265358979323846
+
 using Row = std::vector<double>;
 using Matrix = std::vector<Row>;
 
-// const double LR = 0.01;
-// const int MAX_EPOCHS = 1500;
+const double LR = 0.01;
+const int MAX_EPOCHS = 1500;
 const double TRAIN_RATIO = 0.8;
 // const int BATCH_SIZE = 32;
-// const double TOLERANCE = 1e-6;
+const double TOLERANCE = 1e-6;
 
 enum class KernelType { RBF, COMPLEX };
 
 Matrix initMatrix(size_t rows, size_t cols, double min, double max);
 bool checkRectangle(const Matrix& A, bool Square=false);
+double trace(const Matrix& m);
 Matrix transpose(const Matrix& m);
 double det(Matrix m);
 Matrix invert(const Matrix& m);
@@ -57,6 +60,7 @@ Matrix operator+(const Matrix& A, const Matrix& B);
 Matrix operator-(const Matrix& A, const Matrix& B);
 Matrix operator*(const double k, const Matrix& m);
 Matrix operator*(const Matrix& A, const Matrix& B);
+Row operator*(const Matrix& X, const Row& r);
 
 #include "Data.hpp"
 #include "Kernel.hpp"
