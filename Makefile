@@ -6,7 +6,8 @@ SRCS =	main.cpp Data.cpp Types.cpp export.cpp \
 OBJS = $(addprefix $(OBJDIR)/, $(SRCS:.cpp=.o))
 
 OBJDIR = obj
-CXXFLAGS = -Wall -Wextra -Werror -g3 -MMD -MP
+CXXFLAGS = -Wall -Wextra -Werror -g3 -MMD -MP -O3 -fopenmp -D_PSTL_PAR_BACKEND_SERIAL
+LDFLAGS  = -fopenmp
 
 .SILENT:
 
@@ -19,7 +20,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	c++ $(CXXFLAGS) -c $< -o $@
 
 $(NAME): $(OBJS)
-	c++ $(CXXFLAGS) $(OBJS) -o $(NAME)
+	c++ $(CXXFLAGS) $(OBJS) -o $(NAME) $(LDFLAGS)
 
 a: $(OBJDIR) $(NAME)
 	-.\$(NAME) hw4_data/regression/wine_red.csv 
@@ -56,5 +57,5 @@ re: fclean all
 
 gpush: fclean
 	git add .
-	git commit -m "broken learning"
+	git commit -m "fixed without wine"
 	git push

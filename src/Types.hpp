@@ -39,6 +39,7 @@ using Matrix = std::vector<Row>;
 const double LR = 0.01;
 const int MAX_EPOCHS = 1500;
 const double TRAIN_RATIO = 0.8;
+const int MAX_TRAIN = 700;
 // const int BATCH_SIZE = 32;
 const double TOLERANCE = 1e-6;
 

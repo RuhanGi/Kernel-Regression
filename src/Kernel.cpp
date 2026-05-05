@@ -68,6 +68,9 @@ void Kernel::deriveComplex(const Matrix& X, const Matrix& Cinv, const Row& a)
     theta[1] += LR * (-0.5 * trace(Cinv * dCd1) + 0.5 * dot(a, dCd1 * a));
     theta[2] += LR * (-0.5 * trace(Cinv * dCd2) + 0.5 * dot(a, dCd2 * a));
     theta[3] += LR * (-0.5 * trace(Cinv * dCd3) + 0.5 * dot(a, dCd3 * a));
+
+    for (size_t i = 0; i < 4; i++)
+        theta[i] = std::min(std::max(theta[i], TOLERANCE), 1e4);
 }
 
 
@@ -77,6 +80,7 @@ void Kernel::update(const Matrix& X, const Matrix& Cinv, const Row& a)
     double aSqr = dot(a, a);
 
     beta += LR * (0.5 * trace(Cinv)/(beta*beta) - 0.5 * aSqr/(beta*beta));
+    beta = std::min(std::max(beta, TOLERANCE), 1e4);
     if (type == KernelType::RBF)
     {
         Matrix dCdT(N, Row(N));
@@ -88,6 +92,7 @@ void Kernel::update(const Matrix& X, const Matrix& Cinv, const Row& a)
                 dCdT[i][j] = k * (dist / (2 * theta[0] * theta[0]));
             }
         theta[0] += LR * (-0.5 * trace(Cinv * dCdT) + 0.5 * dot(a, dCdT * a));
+        theta[0] = std::max(theta[0], TOLERANCE);
     }
     else if (type == KernelType::COMPLEX)
         deriveComplex(X, Cinv, a);

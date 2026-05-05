@@ -144,7 +144,13 @@ void Dataset::split() {
     valY.assign(Y.begin() + trainSize, Y.end());
     X.erase(X.begin() + trainSize, X.end());
     Y.erase(Y.begin() + trainSize, Y.end());
-}
+
+    // ! REMOVE IF NOT DOING GAUSSIAN PROCESS
+    if (MAX_TRAIN > 0 && X.size() > MAX_TRAIN) {
+        X.resize(MAX_TRAIN);
+        Y.resize(MAX_TRAIN);
+    }
+    }
 
 void Dataset::printStats() {
     normalize();
