@@ -40,10 +40,9 @@ const double LR = 0.01;
 const int MAX_EPOCHS = 1500;
 const double TRAIN_RATIO = 0.8;
 const int MAX_TRAIN = 700;
-// const int BATCH_SIZE = 32;
-const double TOLERANCE = 1e-6;
+const double TOLERANCE = 1e-4;
 
-enum class KernelType { RBF, COMPLEX };
+enum class KernelType { RBF, COMPLEX, ARD };
 
 Matrix initMatrix(size_t rows, size_t cols, double min, double max);
 bool checkRectangle(const Matrix& A, bool Square=false);

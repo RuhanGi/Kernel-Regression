@@ -15,13 +15,18 @@
 
 Kernel::Kernel(const KernelType k) : type(k)
 {
-    theta.push_back(1.0);
-    if (type == KernelType::COMPLEX)
+    
+    if (type == KernelType::RBF)
+        theta.push_back(1.0);
+    else if (type == KernelType::COMPLEX)
     {
+        theta.push_back(1.0);
         theta.push_back(1.0);
         theta.push_back(0.1);
         theta.push_back(0.1);
     }
+    else if (type == KernelType::ARD)
+        theta.push_back(1.0);
 
     beta = 1.0;
 }
@@ -36,6 +41,19 @@ double calcDistance(const Row& xn, const Row& xm)
 }
 
 
+double Kernel::calcARD(const Row& xn, const Row& xm) {
+    while (xn.size()+1 > theta.size())
+        theta.push_back(1.0);
+
+    double sum = 0.0;
+    for (size_t i = 0; i < xn.size(); i++) {
+        double l_sqr = std::pow(theta[i + 1], 2);
+        sum += std::pow(xn[i] - xm[i], 2) / std::max(l_sqr, 1e-9);
+    }
+    return sum;
+}
+
+
 double Kernel::calc(const Row& xn, const Row& xm)
 {
     double dist = calcDistance(xn, xm);
@@ -44,6 +62,8 @@ double Kernel::calc(const Row& xn, const Row& xm)
     else if (type == KernelType::COMPLEX)
         return (theta[0] * std::exp(theta[1] * dist / -2)
          + theta[2] + theta[3] * dot(xn, xm));
+    else if (type == KernelType::ARD)
+        return theta[0] * std::exp(-0.5 * calcARD(xn, xm));
     return 0;
 }
 
@@ -74,6 +94,33 @@ void Kernel::deriveComplex(const Matrix& X, const Matrix& Cinv, const Row& a)
 }
 
 
+void Kernel::deriveARD(const Matrix& X, const Matrix& Cinv, const Row& a)
+{
+    size_t N = X.size();
+    size_t D = X[0].size();
+    Matrix dCdT0(N, Row(N));
+    for (size_t i = 0; i < N; i++)
+        for (size_t j = 0; j < N; j++)
+            dCdT0[i][j] = std::exp(-0.5 * calcARD(X[i], X[j]));
+
+    theta[0] += LR * (-0.5 * trace(Cinv * dCdT0) + 0.5 * dot(a, dCdT0 * a));
+    for (size_t d = 0; d < D; d++) {
+        Matrix dCdTd(N, Row(N));
+        for (size_t i = 0; i < N; i++) {
+            for (size_t j = 0; j < N; j++) {
+                double dist_d = std::pow(X[i][d] - X[j][d], 2);
+                double k_val = calc(X[i], X[j]);
+                dCdTd[i][j] = k_val * (dist_d / std::pow(theta[d + 1], 3));
+            }
+        }
+        theta[d + 1] += LR * (-0.5 * trace(Cinv * dCdTd) + 0.5 * dot(a, dCdTd * a));
+    }
+
+    for (double &t : theta)
+        t = std::min(std::max(t, TOLERANCE), 1e4);
+}
+
+
 void Kernel::update(const Matrix& X, const Matrix& Cinv, const Row& a)
 {
     size_t N = X.size();
@@ -96,12 +143,14 @@ void Kernel::update(const Matrix& X, const Matrix& Cinv, const Row& a)
     }
     else if (type == KernelType::COMPLEX)
         deriveComplex(X, Cinv, a);
+    else if (type == KernelType::ARD)
+        deriveARD(X, Cinv, a);
 }
 
 void Kernel::print()
 {
-    std::cout << "Beta = " << beta;
+    std::cout << "Hyperparameters = [Beta=" << beta;
     for (double t : theta)
-        std::cout << " " << t;
-    std::cout << "\n";
+        std::cout << ", " << t;
+    std::cout << "]" << std::flush;
 }

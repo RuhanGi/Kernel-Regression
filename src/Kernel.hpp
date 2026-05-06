@@ -23,8 +23,10 @@ class Kernel {
         double beta;
 
         Kernel(KernelType k);
+        double calcARD(const Row& xn, const Row& xm);
         double calc(const Row& xn, const Row& xm);
         void update(const Matrix& X, const Matrix& Cinv, const Row& a);
         void deriveComplex(const Matrix& X, const Matrix& Cinv, const Row& a);
+        void deriveARD(const Matrix& X, const Matrix& Cinv, const Row& a);
         void print();
 };

@@ -57,5 +57,5 @@ re: fclean all
 
 gpush: fclean
 	git add .
-	git commit -m "fixed without wine"
+	git commit -m "train success"
 	git push

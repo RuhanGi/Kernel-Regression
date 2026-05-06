@@ -24,6 +24,7 @@ int	main(int argc, char *argv[])
 
 		Kernel k = Kernel(KernelType::COMPLEX);
 		// Kernel k = Kernel(KernelType::RBF);
+		// Kernel k = Kernel(KernelType::ARD);
 		GProcess g = GProcess(k);
 		g.fit(data);
 	}

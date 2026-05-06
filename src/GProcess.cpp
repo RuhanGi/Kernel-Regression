@@ -59,9 +59,12 @@ void GProcess::fit(Dataset &d)
 
     Matrix C(N, Row(N));
     Matrix k(Nval, Row(N));
+    Row vars(Nval);
+    int patience = 15;
+    int sinceBest = 0;
+    double bestR = -1e300;
     for (int epoch = 0; epoch < MAX_EPOCHS; epoch++)
     {
-        kernel.print();
         for (size_t i = 0; i < N; i++)
             for (size_t j = 0; j < N; j++)
                 C[i][j] = kernel.calc(d.X[i], d.X[j]) + (i == j) / kernel.beta;
@@ -72,55 +75,40 @@ void GProcess::fit(Dataset &d)
 
         Matrix Cinv = invert(C);
         Matrix a = Cinv * d.Y;
+        Row aT = transpose(a)[0];
         Matrix means = k * a;
+        
+        for (size_t i = 0; i < Nval; i++)
+            vars[i] = kernel.calc(d.valX[i], d.valX[i]) - dot(k[i], Cinv * k[i]);
 
-        rHistory.push_back(rSqr(means, d.valY));
-        kernel.update(d.X, Cinv, transpose(a)[0]);
+        rHistory.push_back(rSqr(d.valY, means));
+        kernel.update(d.X, Cinv, aT);
 
-        double term1 = -0.5 * dot(transpose(d.Y)[0], transpose(a)[0]);
+        double term1 = -0.5 * dot(transpose(d.Y)[0], aT);
         double term2 = -0.5 * logAbsDet(C);
         double term3 = -(N / 2.0) * std::log(2 * M_PI);
         double like = (term1 + term2 + term3) / N;
         likeHistory.push_back(like);
 
-        // if (epoch > 0 && std::abs(likeHistory[epoch] - likeHistory[epoch-1]) < TOLERANCE)
-        //     break;
-        if (epoch > 0 && std::abs(rHistory[epoch] - rHistory[epoch-1]) < TOLERANCE)
-            break;
         std::cout   << "\rEpoch: " << epoch 
                     << "\t| R^2: " << rHistory.back()
                     << "\t| log(P): " << likeHistory.back()
                     << "\t" << std::flush;
+        kernel.print();
+
+        if (rHistory.back() > bestR + TOLERANCE) {
+            bestR = rHistory.back();
+            sinceBest = 0;
+        } else
+            sinceBest++;
+
+        if (sinceBest >= patience)
+        {
+            std::cout << "\n";
+            break; 
+        }
     }
 
     std::cout << "Initial R^2: " << rHistory.front() << "\n";
-    std::cout << "Final R^2: " << rHistory.back() << "\n";
+    std::cout << "Best R^2: " << bestR << "\n";
 }
-
-// void GProcess::fit(Dataset &d)
-// {
-//     size_t N = d.X.size();
-//     Matrix C(N, Row(N));
-//     for (size_t i = 0; i < N; i++)
-//         for (size_t j = 0; j < N; j++)
-//             C[i][j] = kernel.calc(d.X[i], d.X[j]) + (i == j) / kernel.beta;
-
-//     size_t Nval = d.valX.size();
-//     Matrix k(Nval, Row(N));
-//     for (size_t i = 0; i < Nval; i++)
-//         for (size_t j = 0; j < N; j++)
-//             k[i][j] = kernel.calc(d.valX[i], d.X[j]);
-
-//     Matrix Cinv = invert(C); // N x N
-//     Matrix a = Cinv * d.Y; // N x 1
-
-//     Matrix means = k * a; // Nval x 1
-//     kernel.update(d.X, Cinv, a[0]);
-
-//     Row vars(Nval);
-//     for (size_t i = 0; i < Nval; i++)
-//         vars[i] = kernel.calc(d.valX[i], d.valX[i]) - dot(k[i], Cinv * k[i]);
-
-
-//     std::cout << rSqr(means, d.valY);
-// }
