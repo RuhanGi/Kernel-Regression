@@ -18,38 +18,6 @@ GProcess::GProcess(Kernel &k) : kernel(k)
 }
 
 
-double logAbsDet(Matrix m)
-{
-    if (m.empty()) return 0.0;
-    size_t n = m.size();
-    if (!checkRectangle(m, true))
-        throw std::invalid_argument("Non-Square Matrix");
-
-    double log_abs = 0.0;
-    for (size_t j = 0; j < n; j++)
-    {
-        size_t pivot = j;
-        for (size_t i = j + 1; i < n; i++)
-            if (std::abs(m[i][j]) > std::abs(m[pivot][j])) pivot = i;
-        std::swap(m[j], m[pivot]);                       // swap rows
-        if (std::abs(m[j][j]) < 1e-15) return std::nan(""); // singular
-
-        log_abs += std::log(std::abs(m[j][j]));          // accumulate log|pivot|
-
-        double inv_pivot = 1.0 / m[j][j];                // normalise pivot row
-        for (size_t k = 0; k < n; k++) m[j][k] *= inv_pivot;
-        for (size_t i = 0; i < n; i++)
-            if (i != j)
-            {
-                double factor = m[i][j];
-                for (size_t k = 0; k < n; k++)
-                    m[i][k] -= factor * m[j][k];
-            }
-    }
-    return log_abs;
-}
-
-
 Matrix GProcess::getPredictiveState(Dataset &d, const Matrix &Cinv, const Row& a) {
     size_t Nval = d.valX.size();
     size_t Ntrain = Cinv.size();
@@ -72,22 +40,42 @@ Matrix GProcess::getPredictiveState(Dataset &d, const Matrix &Cinv, const Row& a
 }
 
 
-void GProcess::writeToCSV(const std::string& filename, const Matrix& initial, const Matrix& optimized) {
-    std::ofstream file(filename);
-    file << "TrueValue,InitMean,InitStd,OptMean,OptStd\n";
-    for (size_t i = 0; i < initial.size(); i++) {
-        file << initial[i][0] << "," 
-             << initial[i][1] << "," << initial[i][2] << ","
-             << optimized[i][1] << "," << optimized[i][2] << "\n";
-    }
-    file.close();
+double MSE(const Matrix &preds, const Matrix &actual)
+{
+    double totalLoss = 0.0;
+    size_t n = preds.size();
+    size_t k = preds[0].size();
+
+    for (size_t i = 0; i < n; i++)
+        for (size_t j = 0; j < k; j++) {
+            double error = actual[i][j] - preds[i][j];
+            totalLoss += error * error;
+        }
+    return totalLoss / (n * k);
 }
 
 
-void GProcess::fit(Dataset &d) {
+Matrix GProcess::formatPlotData(Dataset &d, const Matrix& state) {
+    Matrix out;
+    for(size_t i = 0; i < d.valX.size(); i++) {
+        Row r;
+        r.push_back(d.valX[i][0]); // X1
+        r.push_back(d.valX[i].size() > 1 ? d.valX[i][1] : 0.0); // X2 or 0
+        r.push_back(state[i][0]); // True Y
+        r.push_back(state[i][1]); // Mean
+        r.push_back(state[i][2]); // Std
+        out.push_back(r);
+    }
+    return out;
+}
+
+
+GPResults GProcess::fit(Dataset &d) {
+    GPResults res;
+    res.k = kernel.type;
+
     size_t N = d.X.size();
     Matrix initialMetrics, optimizedMetrics;
-    double initialR = -1e300;
     double bestR = -1e300;
     int sinceBest = 0;
 
@@ -101,23 +89,23 @@ void GProcess::fit(Dataset &d) {
         Matrix a = Cinv * d.Y;
         Row aVec = transpose(a)[0];
         Matrix state = getPredictiveState(d, Cinv, aVec);
-
-        kernel.update(d.X, Cinv, aVec);
-        double currentR = rSqr(d.valY, transpose({transpose(state)[1]}));
+        Matrix preds = transpose({transpose(state)[1]});
+        double currentR2 = rSqr(d.valY, preds);
+        double currentMSE = MSE(d.valY, preds);
+        res.history.push_back({currentR2, currentMSE});
         if (epoch == 0)
-        {
-            initialR = currentR;
-            initialMetrics = state;
-            optimizedMetrics = state;
-        }
+            res.initialPredictions = formatPlotData(d, state);
+        
+        kernel.update(d.X, Cinv, aVec);
 
-        std::cout   << "\rEpoch: " << epoch 
-            << "\t| R^2: " << currentR
-            << "\t" << std::flush;
-        if (currentR > bestR + TOLERANCE) {
-            bestR = currentR;
+        std::cout   << YELLOW "\rEpoch: " << epoch 
+            << RED "\t| MSE: " << currentMSE
+            << GREEN "\t| R^2: " << currentR2
+            << "\t" RESET << std::flush;
+        if (currentR2 > bestR + TOLERANCE) {
+            bestR = currentR2;
             sinceBest = 0;
-            optimizedMetrics = state;
+            res.finalPredictions = formatPlotData(d, state);
         } else
             sinceBest++;
 
@@ -125,7 +113,7 @@ void GProcess::fit(Dataset &d) {
             break; 
     }
 
-    writeToCSV("results.csv", initialMetrics, optimizedMetrics);
-    std::cout << "\n" "Initial R^2: " << initialR << "\n";
-    std::cout << "Best R^2: " << bestR << "\n";
+    std::cout << GREY "\n" "Initial R^2: " << res.history.front().r2 << "\n";
+    std::cout << "Best R^2: " << bestR << "\n" RESET;
+    return res;
 }

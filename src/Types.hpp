@@ -62,5 +62,21 @@ Matrix operator*(const double k, const Matrix& m);
 Matrix operator*(const Matrix& A, const Matrix& B);
 Row operator*(const Matrix& X, const Row& r);
 
+struct EpochMetrics {
+    double r2;
+    double mse;
+};
+
+struct GPResults {
+    std::vector<EpochMetrics> history;
+    Matrix initialPredictions;
+    Matrix finalPredictions;
+    KernelType k;
+};
+
+
 #include "Data.hpp"
+
+void runAssessment(Dataset &data);
+
 #include "Kernel.hpp"

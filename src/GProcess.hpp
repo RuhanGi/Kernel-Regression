@@ -22,6 +22,7 @@ class GProcess {
         GProcess(Kernel &k);
     
         Matrix getPredictiveState(Dataset &d, const Matrix &Cinv, const Row &a);
-        void fit(Dataset &d);
+        Matrix formatPlotData(Dataset &d, const Matrix& state);
+        GPResults fit(Dataset &d);
         void writeToCSV(const std::string& filename, const Matrix& initial, const Matrix& optimized);
 };
