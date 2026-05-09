@@ -20,5 +20,8 @@ class GProcess {
 
     public:
         GProcess(Kernel &k);
+    
+        Matrix getPredictiveState(Dataset &d, const Matrix &Cinv, const Row &a);
         void fit(Dataset &d);
+        void writeToCSV(const std::string& filename, const Matrix& initial, const Matrix& optimized);
 };

@@ -50,65 +50,82 @@ double logAbsDet(Matrix m)
 }
 
 
-void GProcess::fit(Dataset &d)
-{
-    size_t N = d.X.size();
+Matrix GProcess::getPredictiveState(Dataset &d, const Matrix &Cinv, const Row& a) {
     size_t Nval = d.valX.size();
-    Row rHistory;
-    Row likeHistory;
+    size_t Ntrain = Cinv.size();
+    Matrix state(Nval, Row(3));
 
-    Matrix C(N, Row(N));
-    Matrix k(Nval, Row(N));
-    Row vars(Nval);
-    int patience = 15;
-    int sinceBest = 0;
+    for (size_t i = 0; i < Nval; i++) {
+        Row k(Ntrain);
+        for (size_t j = 0; j < Ntrain; j++)
+            k[j] = kernel.calc(d.valX[i], d.X[j]);
+
+        double mean = dot(k, a);
+        double self_cov = kernel.calc(d.valX[i], d.valX[i]) + 1.0/kernel.beta;
+        double var = self_cov - dot(k, Cinv * k);
+        
+        state[i][0] = d.valY[i][0];
+        state[i][1] = mean;
+        state[i][2] = std::sqrt(std::max(0.0, var));
+    }
+    return state;
+}
+
+
+void GProcess::writeToCSV(const std::string& filename, const Matrix& initial, const Matrix& optimized) {
+    std::ofstream file(filename);
+    file << "TrueValue,InitMean,InitStd,OptMean,OptStd\n";
+    for (size_t i = 0; i < initial.size(); i++) {
+        file << initial[i][0] << "," 
+             << initial[i][1] << "," << initial[i][2] << ","
+             << optimized[i][1] << "," << optimized[i][2] << "\n";
+    }
+    file.close();
+}
+
+
+void GProcess::fit(Dataset &d) {
+    size_t N = d.X.size();
+    Matrix initialMetrics, optimizedMetrics;
+    double initialR = -1e300;
     double bestR = -1e300;
-    for (int epoch = 0; epoch < MAX_EPOCHS; epoch++)
-    {
+    int sinceBest = 0;
+
+    for (int epoch = 0; epoch < MAX_EPOCHS; epoch++) {
+        Matrix C(N, Row(N));
         for (size_t i = 0; i < N; i++)
             for (size_t j = 0; j < N; j++)
                 C[i][j] = kernel.calc(d.X[i], d.X[j]) + (i == j) / kernel.beta;
 
-        for (size_t i = 0; i < Nval; i++)
-            for (size_t j = 0; j < N; j++)
-                k[i][j] = kernel.calc(d.valX[i], d.X[j]);
-
         Matrix Cinv = invert(C);
         Matrix a = Cinv * d.Y;
-        Row aT = transpose(a)[0];
-        Matrix means = k * a;
-        
-        for (size_t i = 0; i < Nval; i++)
-            vars[i] = kernel.calc(d.valX[i], d.valX[i]) - dot(k[i], Cinv * k[i]);
+        Row aVec = transpose(a)[0];
+        Matrix state = getPredictiveState(d, Cinv, aVec);
 
-        rHistory.push_back(rSqr(d.valY, means));
-        kernel.update(d.X, Cinv, aT);
-
-        double term1 = -0.5 * dot(transpose(d.Y)[0], aT);
-        double term2 = -0.5 * logAbsDet(C);
-        double term3 = -(N / 2.0) * std::log(2 * M_PI);
-        double like = (term1 + term2 + term3) / N;
-        likeHistory.push_back(like);
+        kernel.update(d.X, Cinv, aVec);
+        double currentR = rSqr(d.valY, transpose({transpose(state)[1]}));
+        if (epoch == 0)
+        {
+            initialR = currentR;
+            initialMetrics = state;
+            optimizedMetrics = state;
+        }
 
         std::cout   << "\rEpoch: " << epoch 
-                    << "\t| R^2: " << rHistory.back()
-                    << "\t| log(P): " << likeHistory.back()
-                    << "\t" << std::flush;
-        kernel.print();
-
-        if (rHistory.back() > bestR + TOLERANCE) {
-            bestR = rHistory.back();
+            << "\t| R^2: " << currentR
+            << "\t" << std::flush;
+        if (currentR > bestR + TOLERANCE) {
+            bestR = currentR;
             sinceBest = 0;
+            optimizedMetrics = state;
         } else
             sinceBest++;
 
-        if (sinceBest >= patience)
-        {
-            std::cout << "\n";
+        if (sinceBest >= 15)
             break; 
-        }
     }
 
-    std::cout << "Initial R^2: " << rHistory.front() << "\n";
+    writeToCSV("results.csv", initialMetrics, optimizedMetrics);
+    std::cout << "\n" "Initial R^2: " << initialR << "\n";
     std::cout << "Best R^2: " << bestR << "\n";
 }

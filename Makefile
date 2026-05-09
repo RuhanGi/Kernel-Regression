@@ -46,6 +46,8 @@ sin: $(OBJDIR) $(NAME)
 ss: $(OBJDIR) $(NAME)
 	-.\$(NAME) hw4_data/regression/sinsurf_2d.csv 
 
+plot:
+	python .\helper\plot.py
 
 clean:
 	if exist $(OBJDIR) rmdir /s /q $(OBJDIR)
@@ -57,5 +59,5 @@ re: fclean all
 
 gpush: fclean
 	git add .
-	git commit -m "train success"
+	git commit -m "Reporting"
 	git push
